@@ -2,95 +2,120 @@
 #include <string.h>
 #include <stdlib.h>
 
-struct TreeNode {
-    char* name;
-    struct TreeNode* children;
-    int numChildren;
-};
 
-struct TreeNode* createTreeNode(char* name) {
-    struct TreeNode* node = (struct TreeNode*)malloc(sizeof(struct TreeNode));
-    node->name = name;
-    node->children = NULL;
-    node->numChildren = 0;
-    return node;
+typedef struct Node {
+    char name[50];
+    struct Node* children;
+    int num_children;
+} Node;
+
+
+Node* createNode(char* name, int num_children) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    strcpy(newNode->name, name);
+    newNode->num_children = num_children;
+    newNode->children = NULL;
+    if (num_children > 0) {
+        newNode->children = (Node*)malloc(num_children * sizeof(Node));
+    }
+    return newNode;
 }
 
-void addChildNode(struct TreeNode* parent, struct TreeNode* child) {
-    parent->numChildren++;
-    parent->children = (struct TreeNode*)realloc(parent->children, parent->numChildren * sizeof(struct TreeNode));
-    parent->children[parent->numChildren - 1] = *child;
+
+Node* buildTree() {
+    char city[50];
+    printf("Enter the city: ");
+    scanf("%s", city);
+    
+    int num_suburbs;
+    printf("Enter the number of suburbs: ");
+    scanf("%d", &num_suburbs);
+    
+    Node* cityNode = createNode(city, num_suburbs);
+    for (int i = 0; i < num_suburbs; i++) {
+        char suburb[50];
+        printf("Enter the name of suburb %d: ", i + 1);
+        scanf("%s", suburb);
+        
+        int num_towns;
+        printf("Enter the number of towns in %s: ", suburb);
+        scanf("%d", &num_towns);
+        
+        Node* suburbNode = createNode(suburb, num_towns);
+        for (int j = 0; j < num_towns; j++) {
+            char town[50];
+            printf("Enter the name of town %d in %s: ", j + 1, suburb);
+            scanf("%s", town);
+            
+            int num_corporations;
+            printf("Enter the number of corporations in %s: ", town);
+            scanf("%d", &num_corporations);
+            
+            Node* townNode = createNode(town, num_corporations);
+            for (int k = 0; k < num_corporations; k++) {
+                char corporation[50];
+                printf("Enter the name of corporation %d in %s: ", k + 1, town);
+                scanf("%s", corporation);
+                
+                Node* corporationNode = createNode(corporation, 0);
+                townNode->children[k] = *corporationNode;
+            }
+            
+            suburbNode->children[j] = *townNode;
+        }
+        
+        cityNode->children[i] = *suburbNode;
+    }
+    
+    return cityNode;
+}
+
+Node* findCommonParent(Node* root, char* corporation1, char* corporation2) {
+    if (root == NULL || strcmp(root->name, corporation1) == 0 || strcmp(root->name, corporation2) == 0) {
+        return root;
+    }
+    
+    Node* commonParent = NULL;
+    
+    for (int i = 0; i < root->num_children; i++) {
+        Node* child = &(root->children[i]);
+        Node* found = findCommonParent(child, corporation1, corporation2);
+        
+        if (found != NULL) {
+            if (commonParent == NULL) {
+                commonParent = found;
+            } else {
+                return root;
+            }
+        }
+    }
+    
+    return commonParent;
+}
+
+void printPath(Node* node) {
+    if (node == NULL) {
+        return;
+    }
+    
+    printPath((node - 1)->children);
+    printf("%s, ", node->name);
 }
 
 int main() {
-    char cityName[100];
-    printf("Enter the city name: ");
-    fgets(cityName, sizeof(cityName), stdin);
-    cityName[strcspn(cityName, "\n")] = '\0';
+    Node* cityNode = buildTree();
     
-    int numSuburbs;
-    printf("Enter the number of suburbs: ");
-    scanf("%d", &numSuburbs);
-    getchar(); 
+    char corporation1[50], corporation2[50];
+    printf("Enter the first corporation: ");
+    scanf("%s", corporation1);
+    printf("Enter the second corporation: ");
+    scanf("%s", corporation2);
     
-    struct TreeNode* cityNode = createTreeNode(cityName);
+    Node* commonParent = findCommonParent(cityNode, corporation1, corporation2);
     
-    for (int i = 0; i < numSuburbs; i++) {
-        char suburbName[100];
-        printf("Enter the name of suburb %d: ", i + 1);
-        fgets(suburbName, sizeof(suburbName), stdin);
-        suburbName[strcspn(suburbName, "\n")] = '\0'; 
-        
-        int numTowns;
-        printf("Enter the number of towns in suburb %d: ", i + 1);
-        scanf("%d", &numTowns);
-        getchar(); 
-        
-        struct TreeNode* suburbNode = createTreeNode(suburbName);
-        
-        for (int j = 0; j < numTowns; j++) {
-            char townName[100];
-            printf("Enter the name of town %d in suburb %d: ", j + 1, i + 1);
-            fgets(townName, sizeof(townName), stdin);
-            townName[strcspn(townName, "\n")] = '\0'; 
-            
-            int numCorporations;
-            printf("Enter the number of corporations in town %d, suburb %d: ", j + 1, i + 1);
-            scanf("%d", &numCorporations);
-            getchar(); 
-            
-            struct TreeNode* townNode = createTreeNode(townName);
-            
-            for (int k = 0; k < numCorporations; k++) {
-                char corporationCode[100];
-                printf("Enter the code for corporation %d in town %d, suburb %d: ", k + 1, j + 1, i + 1);
-                fgets(corporationCode, sizeof(corporationCode), stdin);
-                corporationCode[strcspn(corporationCode, "\n")] = '\0';  
-                
-                struct TreeNode* corporationNode = createTreeNode(corporationCode);
-                addChildNode(townNode, corporationNode);
-            }
-            
-            addChildNode(suburbNode, townNode);
-        }
-        
-        addChildNode(cityNode, suburbNode);
-    }
-    
-    int numCodes;
-    printf("Enter the number of corporation codes: ");
-    scanf("%d", &numCodes);
-    getchar(); 
-    
-    char** corporationCodes = (char**)malloc(numCodes * sizeof(char*));
-    for (int i = 0; i < numCodes; i++) {
-        corporationCodes[i] = (char*)malloc(100 * sizeof(char));
-        printf("Enter corporation code %d: ", i + 1);
-        fgets(corporationCodes[i], 100, stdin);
-        corporationCodes[i][strcspn(corporationCodes[i], "\n")] = '\0'; 
-    }
-    
-    
+    printf("Nearest common parent: ");
+    printPath(commonParent);
+    printf("\n");
     
     return 0;
 }
